@@ -1,0 +1,584 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaign Ad Pacing Tool</title>
+
+<style>
+:root {
+  --navy: #123b63;
+  --aqua: #79c0c3;
+  --orange: #e9660a;
+  --bg: #f4f7fa;
+  --border: #dce4eb;
+  --text: #25364a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 28px;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 1500px;
+  margin: auto;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+h1 {
+  color: var(--navy);
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+
+.subtitle { color: #667789; }
+
+button {
+  border: 0;
+  border-radius: 7px;
+  padding: 11px 15px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--navy);
+  color: white;
+}
+
+button:hover { opacity: .88; }
+
+button.secondary {
+  background: white;
+  color: var(--navy);
+  border: 1px solid var(--border);
+}
+
+button.delete {
+  background: #fff0eb;
+  color: #b94020;
+  padding: 8px 10px;
+}
+
+.panel, .metric {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.controls {
+  display: flex;
+  align-items: end;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #526579;
+}
+
+input, select {
+  width: 100%;
+  min-width: 110px;
+  padding: 10px;
+  border: 1px solid #cbd6e0;
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+}
+
+input:focus, select:focus {
+  outline: 2px solid var(--aqua);
+  border-color: var(--navy);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.metric { margin: 0; }
+
+.metric-label {
+  color: #65778a;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.metric-value {
+  color: var(--navy);
+  font-size: 25px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.metric-note {
+  font-size: 12px;
+  color: #738296;
+  margin-top: 8px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+table {
+  width: 100%;
+  min-width: 1450px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  background: var(--navy);
+  color: white;
+  padding: 14px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #e8edf2;
+  vertical-align: middle;
+}
+
+tbody tr:hover { background: #f7fbfd; }
+tbody tr:last-child td { border-bottom: none; }
+
+td input { min-width: 105px; }
+td input.name { min-width: 170px; }
+td input[type="date"] { min-width: 145px; }
+td input[type="number"] { min-width: 105px; }
+
+.result {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status {
+  display: inline-block;
+  padding: 6px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.on-pace { background: #e3f5e9; color: #207344; }
+.under { background: #fff0d5; color: #8a5a00; }
+.over { background: #ffe4df; color: #ae3825; }
+.pending { background: #eaf0f5; color: #526579; }
+
+.progress {
+  width: 100px;
+  height: 7px;
+  background: #e7edf2;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.progress div {
+  height: 100%;
+  background: var(--aqua);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+
+.note {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #667789;
+}
+
+@media (max-width: 850px) {
+  body { padding: 14px; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  h1 { font-size: 23px; }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+  <div>
+    <h1>Ad Pacing</h1>
+    <div class="subtitle">
+      Track campaign spend, delivery, and projected budget utilization.
+    </div>
+  </div>
+  <button onclick="addCampaign()">+ Add Campaign</button>
+</header>
+
+<section class="panel">
+  <div class="controls">
+    <div class="field">
+      <label for="asOf">PACING AS OF</label>
+      <input type="date" id="asOf">
+    </div>
+
+    <div class="field">
+      <label for="tolerance">ON-PACE TOLERANCE</label>
+      <select id="tolerance">
+        <option value="5">±5%</option>
+        <option value="10" selected>±10%</option>
+        <option value="15">±15%</option>
+        <option value="20">±20%</option>
+      </select>
+    </div>
+
+    <button onclick="render()">Update Pacing</button>
+  </div>
+</section>
+
+<section class="metrics">
+  <div class="metric">
+    <div class="metric-label">TOTAL CAMPAIGN BUDGET</div>
+    <div class="metric-value" id="totalBudget">$0.00</div>
+    <div class="metric-note">All listed campaigns</div>
+  </div>
+
+  <div class="metric">
+    <div class="metric-label">TOTAL ACTUAL SPEND</div>
+    <div class="metric-value" id="totalSpend">$0.00</div>
+    <div class="metric-note">Spend entered for all campaigns</div>
+  </div>
+
+  <div class="metric">
+    <div class="metric-label">EXPECTED SPEND TO DATE</div>
+    <div class="metric-value" id="totalExpected">$0.00</div>
+    <div class="metric-note">Based on campaign flight dates</div>
+  </div>
+
+  <div class="metric">
+    <div class="metric-label">CAMPAIGNS NEEDING REVIEW</div>
+    <div class="metric-value" id="reviewCount">0</div>
+    <div class="metric-note">Underspending or overspending</div>
+  </div>
+</section>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Campaign Name</th>
+      <th>Start Date</th>
+      <th>End Date</th>
+      <th>Total Budget ($)</th>
+      <th>Actual Spend ($)</th>
+      <th>Expected Spend ($)</th>
+      <th>Pacing %</th>
+      <th>Variance ($)</th>
+      <th>Projected Final ($)</th>
+      <th>Budget Used</th>
+      <th>Status</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody id="campaignRows"></tbody>
+</table>
+</div>
+
+<div class="actions">
+  <button onclick="addCampaign()">+ Add Campaign</button>
+  <button class="secondary" onclick="exportCSV()">Export CSV</button>
+  <button class="secondary" onclick="clearCampaigns()">Clear All</button>
+</div>
+
+<section class="panel note">
+  <strong>How to read the results</strong><br>
+  Pacing % compares actual spend against expected spend. A result of
+  100% means the campaign is on pace. Variance is actual spend minus
+  expected spend. A negative variance means underspending, while a
+  positive variance means overspending.<br><br>
+
+  Projected Final estimates the spend at the end of the flight if the
+  average daily spend continues. Budget Used shows the percentage of
+  the total budget already spent. The status uses the selected pacing
+  tolerance. Campaigns that have not started, have invalid dates, or
+  have no expected spend yet will be marked Pending.
+</section>
+
+</div>
+
+<script>
+const rows = document.getElementById("campaignRows");
+
+function localDateString(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+document.getElementById("asOf").value = localDateString();
+
+function money(value) {
+  if (!Number.isFinite(value)) return "—";
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function percent(value) {
+  return Number.isFinite(value) ? value.toFixed(1) + "%" : "—";
+}
+
+function numberValue(input) {
+  const value = Number(input.value);
+  return input.value.trim() !== "" && Number.isFinite(value)
+    ? Math.max(0, value)
+    : 0;
+}
+
+function addCampaign(data = {}) {
+  const tr = document.createElement("tr");
+
+  tr.innerHTML = `
+    <td><input class="name" aria-label="Campaign name"
+      placeholder="Campaign name"></td>
+    <td><input type="date" class="start" aria-label="Start date"></td>
+    <td><input type="date" class="end" aria-label="End date"></td>
+    <td><input type="number" class="budget" aria-label="Total budget"
+      min="0" step="0.01" placeholder="0.00"></td>
+    <td><input type="number" class="spend" aria-label="Actual spend"
+      min="0" step="0.01" placeholder="0.00"></td>
+    <td class="result expected">—</td>
+    <td class="result pacing">—</td>
+    <td class="result variance">—</td>
+    <td class="result projected">—</td>
+    <td>
+      <span class="usedText">—</span>
+      <div class="progress"><div style="width:0%"></div></div>
+    </td>
+    <td><span class="status pending">Pending</span></td>
+    <td><button class="delete" type="button">Remove</button></td>
+  `;
+
+  rows.appendChild(tr);
+
+  tr.querySelector(".name").value = data.name || "";
+  tr.querySelector(".start").value = data.start || "";
+  tr.querySelector(".end").value = data.end || "";
+  tr.querySelector(".budget").value = data.budget ?? "";
+  tr.querySelector(".spend").value = data.spend ?? "";
+
+  render();
+}
+
+function daysBetween(start, end) {
+  const day = 86400000;
+  const a = Date.parse(start + "T00:00:00Z");
+  const b = Date.parse(end + "T00:00:00Z");
+  return Math.round((b - a) / day);
+}
+
+function setStatus(element, label, className) {
+  element.textContent = label;
+  element.className = "status " + className;
+}
+
+function render() {
+  const asOf = document.getElementById("asOf").value;
+  const tolerance = Number(document.getElementById("tolerance").value);
+
+  let totalBudget = 0;
+  let totalSpend = 0;
+  let totalExpected = 0;
+  let reviewCount = 0;
+
+  [...rows.querySelectorAll("tr")].forEach(tr => {
+    const name = tr.querySelector(".name").value.trim();
+    const start = tr.querySelector(".start").value;
+    const end = tr.querySelector(".end").value;
+    const budget = numberValue(tr.querySelector(".budget"));
+    const spend = numberValue(tr.querySelector(".spend"));
+
+    const expectedCell = tr.querySelector(".expected");
+    const pacingCell = tr.querySelector(".pacing");
+    const varianceCell = tr.querySelector(".variance");
+    const projectedCell = tr.querySelector(".projected");
+    const usedText = tr.querySelector(".usedText");
+    const bar = tr.querySelector(".progress div");
+    const status = tr.querySelector(".status");
+
+    totalBudget += budget;
+    totalSpend += spend;
+
+    let expected = 0;
+    let pacing = NaN;
+    let variance = NaN;
+    let projected = NaN;
+    let statusLabel = "Pending";
+    let statusClass = "pending";
+    let valid = false;
+
+    if (start && end && asOf && end >= start && budget > 0) {
+      const totalDays = daysBetween(start, end) + 1;
+      const elapsedDays = Math.max(
+        0,
+        Math.min(totalDays, daysBetween(start, asOf) + 1)
+      );
+
+      if (totalDays > 0 && elapsedDays > 0) {
+        expected = budget * elapsedDays / totalDays;
+        pacing = expected > 0 ? spend / expected * 100 : NaN;
+        variance = spend - expected;
+        projected = spend / elapsedDays * totalDays;
+        valid = true;
+        totalExpected += expected;
+
+        if (pacing < 100 - tolerance) {
+          statusLabel = "Underspending";
+          statusClass = "under";
+          reviewCount++;
+        } else if (pacing > 100 + tolerance) {
+          statusLabel = "Overspending";
+          statusClass = "over";
+          reviewCount++;
+        } else {
+          statusLabel = "On Pace";
+          statusClass = "on-pace";
+        }
+      }
+    }
+
+    if (valid) {
+      expectedCell.textContent = money(expected);
+      pacingCell.textContent = percent(pacing);
+      varianceCell.textContent =
+        (variance > 0 ? "+" : "") + money(variance);
+      projectedCell.textContent = money(projected);
+    } else {
+      expectedCell.textContent = "—";
+      pacingCell.textContent = "—";
+      varianceCell.textContent = "—";
+      projectedCell.textContent = "—";
+    }
+
+    const used = budget > 0 ? spend / budget * 100 : NaN;
+    usedText.textContent = percent(used);
+    bar.style.width = Number.isFinite(used)
+      ? Math.max(0, Math.min(100, used)) + "%"
+      : "0%";
+
+    setStatus(status, statusLabel, statusClass);
+
+    tr.title = name;
+  });
+
+  document.getElementById("totalBudget").textContent =
+    money(totalBudget);
+  document.getElementById("totalSpend").textContent =
+    money(totalSpend);
+  document.getElementById("totalExpected").textContent =
+    money(totalExpected);
+  document.getElementById("reviewCount").textContent =
+    reviewCount;
+}
+
+rows.addEventListener("input", render);
+rows.addEventListener("change", render);
+
+rows.addEventListener("click", event => {
+  if (event.target.classList.contains("delete")) {
+    event.target.closest("tr").remove();
+    render();
+  }
+});
+
+document.getElementById("asOf").addEventListener("change", render);
+document.getElementById("tolerance").addEventListener("change", render);
+
+function exportCSV() {
+  const headers = [
+    "Campaign Name", "Start Date", "End Date", "Budget",
+    "Actual Spend", "Expected Spend", "Pacing %",
+    "Variance", "Projected Final", "Budget Used", "Status"
+  ];
+
+  const records = [headers];
+
+  [...rows.querySelectorAll("tr")].forEach(tr => {
+    records.push([
+      tr.querySelector(".name").value,
+      tr.querySelector(".start").value,
+      tr.querySelector(".end").value,
+      tr.querySelector(".budget").value,
+      tr.querySelector(".spend").value,
+      tr.querySelector(".expected").textContent,
+      tr.querySelector(".pacing").textContent,
+      tr.querySelector(".variance").textContent,
+      tr.querySelector(".projected").textContent,
+      tr.querySelector(".usedText").textContent,
+      tr.querySelector(".status").textContent
+    ]);
+  });
+
+  const csv = records.map(row =>
+    row.map(value =>
+      '"' + String(value).replace(/"/g, '""') + '"'
+    ).join(",")
+  ).join("\r\n");
+
+  const blob = new Blob(["\uFEFF" + csv], {
+    type: "text/csv;charset=utf-8;"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "ad-pacing-report.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearCampaigns() {
+  if (!confirm("Remove all campaigns from the table?")) return;
+  rows.innerHTML = "";
+  render();
+}
+
+addCampaign();
+</script>
+</body>
+</html>
